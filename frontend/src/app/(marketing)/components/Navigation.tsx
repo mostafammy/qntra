@@ -48,7 +48,11 @@ const Navigation: React.FC<NavigationProps> = ({ links }) => (
       >
         Journal
       </Link>
-      <Link href="#" className="btn-primary" aria-label="Access Qyntra studio">
+      <Link
+        href="/app"
+        className="btn-primary"
+        aria-label="Access Qyntra studio"
+      >
         Launch Studio
       </Link>
     </div>
