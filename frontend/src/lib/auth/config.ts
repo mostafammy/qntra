@@ -1,4 +1,4 @@
-import type { Account, Session } from "next-auth";
+import type { Account, Session, User } from "next-auth";
 import type { NextAuthConfig } from "next-auth/lib/index.js";
 import type { JWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
@@ -59,6 +59,31 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
+    // CRITICAL: Sync Social Login users to your Backend DB
+    async signIn({ user, account }: { user: User; account: Account | null }) {
+      if (account?.provider === "credentials") return true; // Already handled by authorize()
+
+      try {
+        const response = await fetch(
+          `${env.AUTH_BACKEND_URL}/auth/social-sync`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              provider: account?.provider,
+            }),
+          }
+        );
+
+        return response.ok; // If false, NextAuth denies the login
+      } catch (error) {
+        console.error("Social Sync Error:", error);
+        return false;
+      }
+    },
     async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user && token.sub) {
         session.user.id = token.sub;

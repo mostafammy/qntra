@@ -6,6 +6,7 @@ import { z } from "zod";
 import { signIn } from "@/auth";
 import { env } from "@/lib/env";
 import type { FormState } from "@/types/forms";
+import { AuthError } from "next-auth";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -37,77 +38,75 @@ const handleAuthError = (error: unknown): FormState => {
 };
 
 export async function loginAction(
-  _: FormState,
+  prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-
-  if (!parsed.success) {
-    return {
-      status: "error",
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    };
-  }
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
 
   try {
+    // This calls the "authorize" function in your config.ts
     await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      redirect: false,
+      email,
+      password,
+      redirect: false, // We handle redirect manually to catch errors
     });
   } catch (error) {
-    return handleAuthError(error);
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return {
+            status: "error",
+            message: "Invalid email or password.",
+          };
+        default:
+          return {
+            status: "error",
+            message: "Something went wrong.",
+          };
+      }
+    }
+    throw error; // Rethrow redirect errors (Next.js quirk)
   }
 
-  redirect("/app");
+  // If successful:
+  redirect("/app"); // Or wherever you want them to go
 }
 
 export async function signupAction(
-  _: FormState,
+  prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const parsed = signupSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
 
-  if (!parsed.success) {
-    return {
-      status: "error",
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    };
-  }
-
-  const response = await fetch(`${env.AUTH_BACKEND_URL}/auth/signup`, {
+  // 1. Call Backend to Create User
+  const res = await fetch(`${process.env.AUTH_BACKEND_URL}/auth/signup`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(parsed.data),
-    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password }),
   });
 
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
+  const json = await res.json();
+
+  if (!res.ok) {
     return {
       status: "error",
-      message: payload?.message ?? "Signup failed",
-      fieldErrors: payload?.errors ?? undefined,
+      message: json.message || "Signup failed",
     };
   }
 
+  // 2. If successful, Auto-Login the user
   try {
     await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
+      email,
+      password,
       redirect: false,
     });
   } catch (error) {
-    return handleAuthError(error);
+    // If login fails after signup, redirect to login page
+    redirect("/login?signup=success");
   }
 
   redirect("/app");

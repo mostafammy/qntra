@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-
-import { userStore } from "../utils/userStore";
+import { userStore } from "../utils/userStore.js";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name is required"),

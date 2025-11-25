@@ -1,5 +1,5 @@
 export type FormState = {
-  status: "idle" | "error";
+  status: "success" | "error" | "idle";
   message?: string;
   fieldErrors?: Record<string, string[]>;
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 
 import { loginAction } from "@/app/(auth)/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -10,7 +10,7 @@ import { SocialProviders } from "@/components/auth/SocialProviders";
 import { initialFormState } from "@/types/forms";
 
 export function LoginForm() {
-  const [state, formAction] = useFormState(loginAction, initialFormState);
+  const [state, formAction] = useActionState(loginAction, initialFormState);
 
   return (
     <div className="glass-card w-full max-w-md p-6">
