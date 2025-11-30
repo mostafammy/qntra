@@ -88,21 +88,13 @@ app.post("/auth/social-sync", async (req, res) => {
   }
 });
 
-// ✅ THE API ENDPOINT (Express Style)
-app.get("/api/products", async (req, res) => {
-  try {
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: "desc" },
-      include: { category: true },
-    });
+// Product Routes
+import productRoutes from "./routes/productRoutes.js";
+app.use("/api/products", productRoutes);
 
-    // Express uses res.json(), not NextResponse
-    res.json(products);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Something went wrong" });
-  }
-});
+// Dashboard Routes
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+app.use("/api/dashboard", dashboardRoutes);
 
 // Start Server
 app.listen(PORT, () => {

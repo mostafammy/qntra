@@ -1,108 +1,132 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import { fetchDashboardStats, fetchRecentActivity } from "@/services/dashboard";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { DollarSign, ShoppingBag, AlertTriangle, Package } from "lucide-react";
 
-import { auth, signOut } from "@/auth";
-
-async function signOutAction() {
-  "use server";
-  await signOut({ redirectTo: "/login" });
-}
-
-export default async function StudioHomePage() {
-  const session = await auth();
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  const user = session.user ?? {};
-
-  const profileRows = [
-    { label: "Display name", value: user.name ?? "Unnamed" },
-    { label: "Email", value: user.email ?? "—" },
-    { label: "Provider", value: user.provider ?? "credentials" },
-    { label: "User id", value: user.id ?? "n/a" },
-  ];
+export default async function DashboardPage() {
+  // Parallel data fetching
+  const [stats, activity] = await Promise.all([
+    fetchDashboardStats(),
+    fetchRecentActivity(),
+  ]);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(0,224,255,0.18),transparent_55%),var(--surface)] px-6 py-10 text-white">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10">
-        <header className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_25px_55px_rgba(3,8,23,0.55)] md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.35em] text-[#9aa5ce]">
-              Welcome inside
-            </p>
-            <h1 className="text-3xl font-semibold">Qyntra Studio Console</h1>
-            <p className="text-sm text-[#9aa5ce]">
-              This page lives behind authentication so you can verify that the
-              full sign-in flow works end to end.
-            </p>
-          </div>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/60 md:mt-0"
-            >
-              Sign out
-            </button>
-          </form>
-        </header>
-
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.35em] text-[#9aa5ce]">
-              Session snapshot
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold">Authenticated user</h2>
-            <dl className="mt-6 space-y-4 text-sm text-[#cdd3f5]">
-              {profileRows.map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between gap-3 border-b border-white/5 pb-3"
-                >
-                  <dt className="text-[#8b93c9]">{row.label}</dt>
-                  <dd className="font-medium text-white">{row.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-linear-to-br from-white/5 to-transparent p-6">
-            <p className="text-xs uppercase tracking-[0.35em] text-[#9aa5ce]">
-              Quick actions
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold">Sandbox tools</h2>
-            <ul className="mt-6 space-y-4 text-sm text-[#cdd3f5]">
-              <li className="rounded-2xl border border-white/10 p-4">
-                Use the form on the left to verify that newly created accounts
-                can access protected routes immediately after signup.
-              </li>
-              <li className="rounded-2xl border border-white/10 p-4">
-                Switch providers (Google/GitHub/Discord) to ensure OAuth flows
-                persist sessions correctly.
-              </li>
-              <li className="rounded-2xl border border-white/10 p-4">
-                Sign out above, then try bookmarking this page to confirm you
-                get redirected back to the login screen when unauthenticated.
-              </li>
-            </ul>
-            <div className="mt-6 flex flex-wrap gap-3 text-sm">
-              <Link
-                href="/"
-                className="rounded-2xl border border-white/10 px-4 py-2 text-white transition hover:border-white/50"
-              >
-                Return to marketing site
-              </Link>
-              <Link
-                href="/signup"
-                className="rounded-2xl border border-white/10 px-4 py-2 text-white transition hover:border-white/50"
-              >
-                Create another profile
-              </Link>
-            </div>
-          </div>
-        </section>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          Dashboard Overview
+        </h1>
+        <p className="text-[var(--text-secondary)]">
+          Welcome back to your command center.
+        </p>
       </div>
-    </main>
+
+      {/* KPI Cards */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <StatCard
+          title="Total Revenue"
+          value={`$${stats.revenue.toLocaleString()}`}
+          icon={DollarSign}
+          trend="+12.5%"
+          trendUp={true}
+        />
+        <StatCard
+          title="Active Orders"
+          value={stats.activeOrders}
+          icon={ShoppingBag}
+          trend="+5.2%"
+          trendUp={true}
+        />
+        <StatCard
+          title="Low Stock Alerts"
+          value={stats.lowStock}
+          icon={AlertTriangle}
+          trend={stats.lowStock > 0 ? "Action Needed" : "All Good"}
+          trendUp={stats.lowStock === 0}
+        />
+      </div>
+
+      {/* Recent Activity */}
+      <div className="rounded-xl border border-[var(--accent-soft)] bg-[var(--surface-alt)]/30 p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">
+            Recent Activity
+          </h2>
+          <button className="text-sm text-blue-400 hover:text-blue-300">
+            View All
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-[var(--text-secondary)]">
+            <thead className="border-b border-[var(--accent-soft)] text-xs uppercase text-[var(--text-secondary)]/70">
+              <tr>
+                <th className="pb-3">Order ID</th>
+                <th className="pb-3">Customer</th>
+                <th className="pb-3">Status</th>
+                <th className="pb-3 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--accent-soft)]">
+              {activity.map((item) => (
+                <tr key={item.id} className="group">
+                  <td className="py-4 font-medium text-[var(--text-primary)]">
+                    {item.id.slice(-6)}...
+                  </td>
+                  <td className="py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-[var(--accent-soft)] flex items-center justify-center overflow-hidden text-[var(--accent)]">
+                        {item.user.image ? (
+                          <img
+                            src={item.user.image}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs">
+                            {item.user.name?.[0] || "?"}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-[var(--text-primary)]">
+                          {item.user.name || "Guest"}
+                        </div>
+                        <div className="text-xs">{item.user.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        item.status === "PAID"
+                          ? "bg-green-500/10 text-green-400"
+                          : item.status === "PENDING"
+                          ? "bg-yellow-500/10 text-yellow-400"
+                          : "bg-[var(--accent-soft)] text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="py-4 text-right font-medium text-[var(--text-primary)]">
+                    ${item.total.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+              {activity.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="py-8 text-center text-[var(--text-secondary)]/70"
+                  >
+                    No recent activity found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
